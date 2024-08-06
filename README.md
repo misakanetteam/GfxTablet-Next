@@ -26,8 +26,6 @@ So, you can use your Android tablet or smartphone to control the PC and,
 for instance _use GIMP with your Android tablet as a graphics tablet_
 (even pressure-sensitive, if your hardware supports it).
 
-Help and discussion: [GfxTablet discussions](https://github.com/rfc2822/GfxTablet/discussions)
-
 License
 -------
 
