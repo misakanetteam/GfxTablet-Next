@@ -1,39 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="at.bitfire.gfxtablet"
-    android:versionCode="5"
-    android:versionName="1.4" >
-
-    <uses-sdk />
+    xmlns:tools="http://schemas.android.com/tools" >
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <uses-configuration android:reqTouchScreen="stylus"/>
     <uses-configuration android:reqTouchScreen="finger"/>
+    <uses-configuration android:reqTouchScreen="stylus"/>
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
-        android:theme="@style/AppTheme"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:largeHeap="true">
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Gfxtabletnext"
+        tools:targetApi="31" >
         <activity
-            android:name="at.bitfire.gfxtablet.CanvasActivity"
-            android:label="@string/app_name"
-            android:screenOrientation="sensorLandscape" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name="at.bitfire.gfxtablet.SettingsActivity"
-            android:label="@string/menu_settings"
-            android:parentActivityName=".CanvasActivity">
+            android:name=".SettingsActivity"
+            android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="at.bitfire.gfxtablet.CanvasActivity" />
+                android:value=".CanvasActivity" />
+        </activity>
+        <activity
+            android:name=".CanvasActivity"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
     </application>
 

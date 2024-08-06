@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">GfxTablet Next</string>
 
-    <string name="app_name">GfxTablet</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_about">About / Help</string>
     <string name="menu_donate">Donate</string>

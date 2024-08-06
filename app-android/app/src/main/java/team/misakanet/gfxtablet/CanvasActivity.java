@@ -1,19 +1,16 @@
-package at.bitfire.gfxtablet;
+package team.misakanet.gfxtablet;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.PopupMenu;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -22,8 +19,19 @@ import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class CanvasActivity extends AppCompatActivity implements View.OnSystemUiVisibilityChangeListener, SharedPreferences.OnSharedPreferenceChangeListener {
-    private static final int RESULT_LOAD_IMAGE = 1;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.preference.PreferenceManager;
+
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class CanvasActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = "GfxTablet.Canvas";
 
     final Uri homepageUri = Uri.parse(("https://gfxtablet.bitfire.at"));
@@ -33,24 +41,52 @@ public class CanvasActivity extends AppCompatActivity implements View.OnSystemUi
     SharedPreferences preferences;
     boolean fullScreen = false;
 
+    ActivityResultLauncher<String> imageSelectActivityResultLauncher;
+    ActivityResultLauncher<Intent> intentActivityResultLauncher;
+
+    ExecutorService executorService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         preferences.registerOnSharedPreferenceChangeListener(this);
+
+        imageSelectActivityResultLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), result -> {
+            if (result != null) {
+                String[] filePathColumn = { MediaStore.Images.Media.DATA };
+
+                try (Cursor cursor = getContentResolver().query(result, filePathColumn, null, null, null)) {
+                    assert cursor != null;
+                    cursor.moveToFirst();
+
+                    int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                    String picturePath = cursor.getString(columnIndex);
+
+                    preferences.edit().putString(SettingsActivity.KEY_TEMPLATE_IMAGE, picturePath).apply();
+                    showTemplateImage();
+                }
+            }
+        });
+
+        intentActivityResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result->{});
 
         setContentView(R.layout.activity_canvas);
 
         // create network client in a separate thread
         netClient = new NetworkClient(PreferenceManager.getDefaultSharedPreferences(this));
         new Thread(netClient).start();
-        new ConfigureNetworkingTask().execute();
+
+        executorService = Executors.newFixedThreadPool(5);
 
         // notify CanvasView of the network client
-        CanvasView canvas = (CanvasView)findViewById(R.id.canvas);
+        CanvasView canvas = findViewById(R.id.canvas);
         canvas.setNetworkClient(netClient);
+
+        executorService.execute(new updateHost());
     }
 
     @Override
@@ -67,8 +103,12 @@ public class CanvasActivity extends AppCompatActivity implements View.OnSystemUi
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        if (!executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
         netClient.getQueue().add(new NetEvent(NetEvent.Type.TYPE_DISCONNECT));
+
+        super.onDestroy();
     }
 
     @Override
@@ -79,8 +119,9 @@ public class CanvasActivity extends AppCompatActivity implements View.OnSystemUi
 
     @Override
     public void onBackPressed() {
-        if (fullScreen)
+        if (fullScreen){
             switchFullScreen(null);
+        }
         else
             super.onBackPressed();
     }
@@ -94,54 +135,35 @@ public class CanvasActivity extends AppCompatActivity implements View.OnSystemUi
     }
 
     public void showSettings(MenuItem item) {
-        startActivityForResult(new Intent(this, SettingsActivity.class), 0);
+        intentActivityResultLauncher.launch(new Intent(this, SettingsActivity.class));
     }
 
 
     // preferences were changed
-
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        switch (key) {
-            case SettingsActivity.KEY_PREF_HOST:
-                Log.i(TAG, "Recipient host changed, reconfiguring network client");
-                new ConfigureNetworkingTask().execute();
-                break;
+        assert key != null;
+        if (key.equals(SettingsActivity.KEY_PREF_HOST)) {
+            Log.i(TAG, "Recipient host changed, reconfiguring network client");
+            executorService.execute(new updateHost());
         }
     }
 
 
     // full-screen methods
-
     public void switchFullScreen(MenuItem item) {
-        final View decorView = getWindow().getDecorView();
-        int uiFlags = decorView.getSystemUiVisibility();
-
-        if (Build.VERSION.SDK_INT >= 14)
-            uiFlags ^= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
-        if (Build.VERSION.SDK_INT >= 16)
-            uiFlags ^= View.SYSTEM_UI_FLAG_FULLSCREEN;
-        if (Build.VERSION.SDK_INT >= 19)
-            uiFlags ^= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-
-        decorView.setOnSystemUiVisibilityChangeListener(this);
-        decorView.setSystemUiVisibility(uiFlags);
-    }
-
-    @Override
-    public void onSystemUiVisibilityChange(int visibility) {
-        Log.i("GfxTablet", "System UI changed " + visibility);
-
-        fullScreen = (visibility & View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) != 0;
-
-        // show/hide action bar according to full-screen mode
         if (fullScreen) {
-            CanvasActivity.this.getSupportActionBar().hide();
+            fullScreen=false;
+            Objects.requireNonNull(CanvasActivity.this.getSupportActionBar()).show();
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).show(WindowInsetsCompat.Type.systemBars());
+        }
+        else {
+            fullScreen=true;
+            Objects.requireNonNull(CanvasActivity.this.getSupportActionBar()).hide();
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).hide(WindowInsetsCompat.Type.systemBars());
             Toast.makeText(CanvasActivity.this, "Press Back button to leave full-screen mode.", Toast.LENGTH_LONG).show();
-        } else
-            CanvasActivity.this.getSupportActionBar().show();
+        }
     }
-
 
     // template image logic
 
@@ -161,39 +183,17 @@ public class CanvasActivity extends AppCompatActivity implements View.OnSystemUi
     }
 
     public void selectTemplateImage(MenuItem item) {
-        Intent i = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(i, RESULT_LOAD_IMAGE);
+        imageSelectActivityResultLauncher.launch("image/*");
+
     }
 
     public void clearTemplateImage(MenuItem item) {
-        preferences.edit().remove(SettingsActivity.KEY_TEMPLATE_IMAGE).commit();
+        preferences.edit().remove(SettingsActivity.KEY_TEMPLATE_IMAGE).apply();
         showTemplateImage();
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == RESULT_LOAD_IMAGE && resultCode == RESULT_OK && data != null) {
-            Uri selectedImage = data.getData();
-            String[] filePathColumn = { MediaStore.Images.Media.DATA };
-
-            Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
-            try {
-                cursor.moveToFirst();
-
-                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-                String picturePath = cursor.getString(columnIndex);
-
-                preferences.edit().putString(SettingsActivity.KEY_TEMPLATE_IMAGE, picturePath).commit();
-                showTemplateImage();
-            } finally {
-                cursor.close();
-            }
-        }
-    }
-
     public void showTemplateImage() {
-        ImageView template = (ImageView)findViewById(R.id.canvas_template);
+        ImageView template = findViewById(R.id.canvas_template);
         template.setImageDrawable(null);
 
         if (template.getVisibility() == View.VISIBLE) {
@@ -210,21 +210,21 @@ public class CanvasActivity extends AppCompatActivity implements View.OnSystemUi
         }
     }
 
-
-    private class ConfigureNetworkingTask extends AsyncTask<Void, Void, Boolean> {
+    private class updateHost implements Runnable {
         @Override
-        protected Boolean doInBackground(Void... params) {
-            return netClient.reconfigureNetworking();
+        public void run() {
+            boolean rslt = netClient.reconfigureNetworking();
+
+            Handler uiThread = new Handler(Looper.getMainLooper());
+            uiThread.post(() -> {
+                if (rslt)
+                    Toast.makeText(CanvasActivity.this, "Touch events will be sent to " + netClient.destAddress.getHostAddress() + ":" + NetworkClient.GFXTABLET_PORT, Toast.LENGTH_LONG).show();
+
+                findViewById(R.id.canvas_template).setVisibility(rslt ? View.VISIBLE : View.GONE);
+                findViewById(R.id.canvas).setVisibility(rslt ? View.VISIBLE : View.GONE);
+                findViewById(R.id.canvas_message).setVisibility(rslt ? View.GONE : View.VISIBLE);
+            });
         }
 
-        protected void onPostExecute(Boolean success) {
-            if (success)
-                Toast.makeText(CanvasActivity.this, "Touch events will be sent to " + netClient.destAddress.getHostAddress() + ":" + NetworkClient.GFXTABLET_PORT, Toast.LENGTH_LONG).show();
-
-            findViewById(R.id.canvas_template).setVisibility(success ? View.VISIBLE : View.GONE);
-            findViewById(R.id.canvas).setVisibility(success ? View.VISIBLE : View.GONE);
-            findViewById(R.id.canvas_message).setVisibility(success ? View.GONE : View.VISIBLE);
-        }
     }
-
 }

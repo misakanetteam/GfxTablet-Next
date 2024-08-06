@@ -1,4 +1,4 @@
-package at.bitfire.gfxtablet;
+package team.misakanet.gfxtablet;
 
 import android.util.Log;
 

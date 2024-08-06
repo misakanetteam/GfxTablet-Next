@@ -1,29 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-             android:layout_width="match_parent"
-             android:layout_height="match_parent"
-             android:orientation="vertical">
-
-    <ImageView
-        android:id="@+id/canvas_template"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".CanvasActivity">
+    
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="fitCenter"/>
+        android:orientation="vertical">
 
-    <view
-        android:id="@+id/canvas"
-        class="at.bitfire.gfxtablet.CanvasView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        <ImageView
+            android:id="@+id/canvas_template"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"/>
 
-    <TextView
-        android:id="@+id/canvas_message"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginLeft="10dp"
-        android:layout_marginRight="10dp"
-        android:gravity="center"
-        android:text="@string/no_host_defined"
-        android:textAppearance="?android:attr/textAppearanceLarge"/>
+        <view
+            android:id="@+id/canvas"
+            class="team.misakanet.gfxtablet.CanvasView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
 
-</FrameLayout>
+        <TextView
+            android:id="@+id/canvas_message"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:gravity="center"
+            android:text="@string/no_host_defined"
+            android:textAppearance="?android:attr/textAppearanceLarge"/>
+
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,17 +1,18 @@
-package at.bitfire.gfxtablet;
+package team.misakanet.gfxtablet;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-import at.bitfire.gfxtablet.NetEvent.Type;
+import androidx.annotation.NonNull;
+import androidx.preference.PreferenceManager;
+
+import team.misakanet.gfxtablet.NetEvent.Type;
 
 @SuppressLint("ViewConstructor")
 public class CanvasView extends View implements SharedPreferences.OnSharedPreferenceChangeListener {
@@ -42,7 +43,7 @@ public class CanvasView extends View implements SharedPreferences.OnSharedPrefer
         settings.registerOnSharedPreferenceChangeListener(this);
         setBackground();
         setInputMethods();
-		inRangeStatus = InRangeStatus.OutOfRange;
+        inRangeStatus = InRangeStatus.OutOfRange;
     }
 
     public void setNetworkClient(NetworkClient networkClient) {
@@ -66,6 +67,7 @@ public class CanvasView extends View implements SharedPreferences.OnSharedPrefer
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+		assert key != null;
         switch (key) {
             case SettingsActivity.KEY_PREF_STYLUS_ONLY:
                 setInputMethods();
@@ -82,7 +84,7 @@ public class CanvasView extends View implements SharedPreferences.OnSharedPrefer
     @Override
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         Log.i(TAG, "Canvas size changed: " + w + "x" + h + " (before: " + oldw + "x" + oldh + ")");
-		maxX = w;
+        maxX = w;
 		maxY = h;
 	}
 
@@ -114,7 +116,8 @@ public class CanvasView extends View implements SharedPreferences.OnSharedPrefer
 		return false;
 	}
 	
-	@Override
+	@SuppressLint("ClickableViewAccessibility")
+    @Override
 	public boolean onTouchEvent(@NonNull MotionEvent event) {
 		if (isEnabled()) {
 			for (int ptr = 0; ptr < event.getPointerCount(); ptr++)
@@ -128,8 +131,8 @@ public class CanvasView extends View implements SharedPreferences.OnSharedPrefer
 						netClient.getQueue().add(new NetEvent(Type.TYPE_MOTION, nx, ny, npressure));
 						break;
 					case MotionEvent.ACTION_DOWN:
-						if (inRangeStatus == inRangeStatus.OutOfRange) {
-							inRangeStatus = inRangeStatus.FakeInRange;
+						if (inRangeStatus == InRangeStatus.OutOfRange) {
+							inRangeStatus = InRangeStatus.FakeInRange;
 							netClient.getQueue().add(new NetEvent(Type.TYPE_BUTTON, nx, ny, (short)0, -1, true));
 						}
 						netClient.getQueue().add(new NetEvent(Type.TYPE_BUTTON, nx, ny, npressure, 0, true));
@@ -137,8 +140,8 @@ public class CanvasView extends View implements SharedPreferences.OnSharedPrefer
 					case MotionEvent.ACTION_UP:
 					case MotionEvent.ACTION_CANCEL:
 						netClient.getQueue().add(new NetEvent(Type.TYPE_BUTTON, nx, ny, npressure, 0, false));
-						if (inRangeStatus == inRangeStatus.FakeInRange) {
-							inRangeStatus = inRangeStatus.OutOfRange;
+						if (inRangeStatus == InRangeStatus.FakeInRange) {
+							inRangeStatus = InRangeStatus.OutOfRange;
 							netClient.getQueue().add(new NetEvent(Type.TYPE_BUTTON, nx, ny, (short)0, -1, false));
 						}
 						break;

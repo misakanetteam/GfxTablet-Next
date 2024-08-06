@@ -1,4 +1,4 @@
-package at.bitfire.gfxtablet;
+package team.misakanet.gfxtablet;
 
 import android.content.SharedPreferences;
 import android.util.Log;
@@ -9,7 +9,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import at.bitfire.gfxtablet.NetEvent.Type;
+import team.misakanet.gfxtablet.NetEvent.Type;
 
 
 public class NetworkClient implements Runnable {
