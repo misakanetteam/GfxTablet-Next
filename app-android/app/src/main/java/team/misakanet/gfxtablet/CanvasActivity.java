@@ -25,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.preference.PreferenceManager;
 
 import java.util.Objects;
@@ -46,9 +47,16 @@ public class CanvasActivity extends AppCompatActivity implements SharedPreferenc
 
     ExecutorService executorService;
 
+    WindowInsetsControllerCompat windowInsetsController;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        windowInsetsController =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+
+        windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
 
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
@@ -152,15 +160,16 @@ public class CanvasActivity extends AppCompatActivity implements SharedPreferenc
 
     // full-screen methods
     public void switchFullScreen(MenuItem item) {
+
         if (fullScreen) {
             fullScreen=false;
             Objects.requireNonNull(CanvasActivity.this.getSupportActionBar()).show();
-            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).show(WindowInsetsCompat.Type.systemBars());
+            windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
         }
         else {
             fullScreen=true;
             Objects.requireNonNull(CanvasActivity.this.getSupportActionBar()).hide();
-            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).hide(WindowInsetsCompat.Type.systemBars());
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
             Toast.makeText(CanvasActivity.this, "Press Back button to leave full-screen mode.", Toast.LENGTH_LONG).show();
         }
     }
